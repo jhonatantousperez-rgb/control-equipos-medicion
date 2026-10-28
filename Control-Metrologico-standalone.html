@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Control Metrológico</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: barra lateral de navegación + área de trabajo; en móvil la navegación pasa a una franja superior con scroll horizontal */
+:root{
+  --bg:#EEF2F3; --surface:#FFFFFF; --surface2:#F5F8F8; --ink:#0F2229; --ink2:#4A5F67; --line:#D7E0E3;
+  --accent:#0A7C78; --accent-ink:#FFFFFF; --accent-soft:#DCF1EF;
+  --ok:#1F7A4C; --ok-soft:#DDF1E5; --warn:#8F6100; --warn-soft:#FBEFCF;
+  --crit:#B8321F; --crit-soft:#FBE1DC; --info:#2B62A8; --info-soft:#DEE9F7;
+  --shadow:0 1px 2px rgba(15,34,41,.06),0 4px 16px rgba(15,34,41,.05);
+  --font:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0C1317; --surface:#131D23; --surface2:#18252C; --ink:#E4EEF0; --ink2:#93A8AF; --line:#263640;
+  --accent:#3CC2BB; --accent-ink:#06201F; --accent-soft:#123A3A;
+  --ok:#54C58A; --ok-soft:#14301F; --warn:#E3B341; --warn-soft:#3A2E10;
+  --crit:#F1796A; --crit-soft:#3D1A16; --info:#78AEEB; --info-soft:#15283F;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.25); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0C1317; --surface:#131D23; --surface2:#18252C; --ink:#E4EEF0; --ink2:#93A8AF; --line:#263640;
+  --accent:#3CC2BB; --accent-ink:#06201F; --accent-soft:#123A3A;
+  --ok:#54C58A; --ok-soft:#14301F; --warn:#E3B341; --warn-soft:#3A2E10;
+  --crit:#F1796A; --crit-soft:#3D1A16; --info:#78AEEB; --info-soft:#15283F;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.25); color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;
+  padding-block:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{margin:0;font-weight:600;text-wrap:balance}
+h1{font-size:1.5rem;letter-spacing:-.01em} h2{font-size:1.02rem} h3{font-size:.92rem}
+button,input,select,textarea{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-size:.86em;letter-spacing:-.01em}
+.muted{color:var(--ink2)} .small{font-size:.82rem} .right{text-align:right}
+.app{display:grid;grid-template-columns:228px minmax(0,1fr);gap:24px;max-width:1500px;margin:0 auto;padding-block:16px}
+.side{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;display:flex;flex-direction:column;gap:18px;padding:6px 0}
+.brand{display:flex;gap:10px;align-items:center;padding:4px 8px}
+.brand svg{flex:none;color:var(--accent)}
+.brand b{display:block;font-size:1rem;letter-spacing:-.01em;line-height:1.15}
+.brand span{font-size:.74rem;color:var(--ink2)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--ink2);text-decoration:none;font-weight:500}
+.nav a:hover{background:var(--surface);color:var(--ink)}
+.nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+.nav a svg{flex:none;width:18px;height:18px}
+.nav .badge{margin-left:auto;font-family:var(--mono);font-size:.72rem;padding:1px 7px;border-radius:99px;background:var(--crit-soft);color:var(--crit)}
+.side-foot{padding:0 8px;font-size:.78rem;color:var(--ink2);display:flex;flex-direction:column;gap:8px}
+.main{display:flex;flex-direction:column;gap:16px;min-width:0}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between}
+.top .sub{color:var(--ink2);font-size:.86rem;margin-top:2px}
+.top-actions{display:flex;gap:8px;flex-wrap:wrap}
+.banner{background:var(--info-soft);color:var(--info);border-radius:10px;padding:10px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:.86rem}
+.banner .btn{margin-left:auto}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);padding:8px 13px;border-radius:8px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--ink2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.danger{color:var(--crit);border-color:var(--crit-soft);background:var(--crit-soft)}
+.btn.ghost{background:transparent}
+.btn.sm{padding:4px 9px;font-size:.8rem;border-radius:6px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);min-width:0}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px 0;flex-wrap:wrap}
+.card-b{padding:14px 16px 16px}
+.grid{display:grid;gap:16px}
+.g-kpi{grid-template-columns:repeat(auto-fit,minmax(168px,1fr))}
+.g-2{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}
+.g-eq{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.kpi{padding:14px 16px;display:flex;flex-direction:column;gap:2px;cursor:pointer;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.kpi:hover{border-color:var(--ink2)}
+.kpi .l{font-size:.78rem;color:var(--ink2);font-weight:500}
+.kpi .v{font-size:1.9rem;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.15}
+.kpi .s{font-size:.76rem;color:var(--ink2)}
+.kpi.crit .v{color:var(--crit)} .kpi.warn .v{color:var(--warn)} .kpi.ok .v{color:var(--ok)}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:99px;font-size:.76rem;font-weight:600;white-space:nowrap;background:var(--surface2);color:var(--ink2)}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.crit{background:var(--crit-soft);color:var(--crit)} .pill.info{background:var(--info-soft);color:var(--info)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 16px}
+.toolbar .grow{flex:1 1 220px}
+input[type=text],input[type=date],input[type=number],input[type=search],select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0;width:100%}
+.toolbar input,.toolbar select{width:auto}
+.toolbar input.grow{width:100%}
+textarea{resize:vertical;min-height:90px;font-family:var(--mono);font-size:.82rem}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th{text-align:left;font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);font-weight:600;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface2)}
+td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:hover{background:var(--surface2)} tr.click{cursor:pointer}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.pager{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 16px;font-size:.84rem;color:var(--ink2);flex-wrap:wrap}
+.tabs{display:flex;gap:4px;padding:0 16px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{background:none;border:0;padding:12px 12px;border-bottom:2px solid transparent;cursor:pointer;color:var(--ink2);font-weight:500;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.alert{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 16px;border-top:1px solid var(--line)}
+.alert:first-child{border-top:0}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--ink2)}
+.dot.crit{background:var(--crit)} .dot.warn{background:var(--warn)} .dot.info{background:var(--info)}
+.alert b{font-weight:600} .alert .d{color:var(--ink2);font-size:.84rem}
+.bars{display:flex;align-items:flex-end;gap:6px;height:150px;padding-top:8px}
+.bars .b{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;height:100%}
+.bars .b i{display:block;width:100%;border-radius:4px 4px 0 0;background:var(--accent);min-height:2px}
+.bars .b.hot i{background:var(--crit)} .bars .b.mid i{background:var(--warn)}
+.bars .n{font-size:.72rem;font-variant-numeric:tabular-nums;color:var(--ink2)}
+.bars .m{font-size:.7rem;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em}
+.meter{height:8px;border-radius:99px;background:var(--surface2);overflow:hidden;display:flex}
+.meter i{display:block;height:100%}
+.rowline{display:grid;grid-template-columns:110px minmax(0,1fr) 54px;gap:10px;align-items:center;padding:6px 0;font-size:.86rem}
+.stack{display:flex;flex-direction:column;gap:12px}
+.hint{background:var(--surface2);border-radius:8px;padding:10px 12px;font-size:.84rem;color:var(--ink2)}
+.hint.warn{background:var(--warn-soft);color:var(--warn)} .hint.crit{background:var(--crit-soft);color:var(--crit)} .hint.ok{background:var(--ok-soft);color:var(--ok)}
+.overlay{position:fixed;inset:0;background:rgba(8,16,20,.55);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) 12px 16px;overflow-y:auto}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:14px;width:min(760px,100%);box-shadow:0 20px 60px rgba(0,0,0,.35);margin:auto 0}
+.modal.wide{width:min(980px,100%)}
+.modal-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.modal-b{padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.modal-f{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--ink2);font-weight:500;min-width:0}
+.form .full{grid-column:1/-1}
+.picklist{max-height:300px;overflow-y:auto;border:1px solid var(--line);border-radius:8px}
+.pick{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;padding:8px 12px;border-top:1px solid var(--line);align-items:center;cursor:pointer}
+.pick:first-child{border-top:0} .pick:hover{background:var(--surface2)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kv div span{display:block;font-size:.74rem;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em}
+.kv div b{font-weight:600}
+.toasts{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:max(16px,env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;z-index:80}
+.toast{background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:10px;box-shadow:var(--shadow);max-width:340px;font-size:.88rem}
+.empty{padding:36px 16px;text-align:center;color:var(--ink2)}
+.timeline{display:flex;flex-direction:column;gap:0}
+.timeline .t{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:.86rem}
+.timeline .t:first-child{border-top:0}
+@media (max-width:900px){
+  .app{grid-template-columns:minmax(0,1fr);gap:12px}
+  .side{position:static;flex-direction:row;align-items:center;flex-wrap:wrap;padding:0}
+  .nav{flex-direction:row;overflow-x:auto;max-width:100%;padding-bottom:4px}
+  .nav a{white-space:nowrap}
+  .side-foot{display:none}
+  .g-2{grid-template-columns:minmax(0,1fr)}
+  .rowline{grid-template-columns:90px minmax(0,1fr) 46px}
+}
+@media (max-width:520px){.g-kpi{grid-template-columns:1fr 1fr}.kpi .v{font-size:1.5rem}}
+@media (prefers-reduced-motion:no-preference){.overlay{animation:fade .12s ease-out}@keyframes fade{from{opacity:0}}}
+</style>
+</head><body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 5a3 3 0 0 1 6 0v13.2a6 6 0 1 1-6 0z"/><path d="M16 12v10" /><circle cx="16" cy="23" r="1.6" fill="currentColor"/></svg>
+      <div><b>Control Metrológico</b><span>Termómetros y termohigrómetros</span></div>
+    </div>
+    <nav class="nav" id="nav" aria-label="Secciones"></nav>
+    <div class="side-foot">
+      <div id="hoy"></div>
+      <button class="btn sm ghost" id="themeBtn" type="button">Cambiar tema</button>
+    </div>
+  </aside>
+  <main class="main">
+    <header class="top">
+      <div><h1 id="viewTitle"></h1><div class="sub" id="viewSub"></div></div>
+      <div class="top-actions" id="topActions"></div>
+    </header>
+    <div id="banner"></div>
+    <div id="view"></div>
+  </main>
+</div>
+<div id="overlay" class="overlay" hidden></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<script>
+/* ============ NÚCLEO: utilidades, estado, datos de ejemplo, cálculos ============ */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const LS_KEY = 'ctrlmet.v1';
+const TIPOS = ['Termohigrómetro', 'Termómetro digital'];
+const PREF = { 'Termohigrómetro': 'TH', 'Termómetro digital': 'TD' };
+const ESTADOS = ['En uso', 'Disponible', 'En tránsito', 'En laboratorio', 'Baja'];
+const REGIONES = ['Andina', 'Caribe', 'Pacífico', 'Orinoquía y Amazonía'];
+const DEF_CFG = { a1: 60, a2: 30, a3: 15, diasLab: 15, maxTransito: 5, maxLab: 20, meses: 12 };
+
+function today0() { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12); }
+function pd(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d, 12); }
+function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function addDays(s, n) { const d = s ? pd(s) : today0(); d.setDate(d.getDate() + n); return iso(d); }
+function addMonths(s, n) { const d = pd(s); const day = d.getDate(); d.setMonth(d.getMonth() + n); if (d.getDate() !== day) d.setDate(0); return iso(d); }
+function daysTo(s) { return s ? Math.round((pd(s) - today0()) / 86400000) : null; }
+function daysSince(s) { return s ? -daysTo(s) : null; }
+function fmt(s) { return s ? pd(s).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }).replace('.', '') : '—'; }
+const todayIso = () => iso(today0());
+
+let S = null; // estado
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+function seedData() {
+  const R = rng(20261027), pick = a => a[Math.floor(R() * a.length)], ri = (a, b) => a + Math.floor(R() * (b - a + 1));
+  const caps = [['Bogotá', 'Andina', 14], ['Medellín', 'Andina', 9], ['Cali', 'Pacífico', 8], ['Barranquilla', 'Caribe', 7], ['Cartagena', 'Caribe', 5], ['Bucaramanga', 'Andina', 4], ['Cúcuta', 'Andina', 3], ['Pereira', 'Andina', 3], ['Manizales', 'Andina', 3], ['Santa Marta', 'Caribe', 3], ['Ibagué', 'Andina', 3], ['Villavicencio', 'Orinoquía y Amazonía', 3], ['Pasto', 'Pacífico', 3], ['Montería', 'Caribe', 3], ['Neiva', 'Andina', 2], ['Armenia', 'Andina', 2], ['Popayán', 'Pacífico', 2], ['Valledupar', 'Caribe', 2], ['Tunja', 'Andina', 2], ['Sincelejo', 'Caribe', 2], ['Riohacha', 'Caribe', 2], ['Yopal', 'Orinoquía y Amazonía', 2], ['Quibdó', 'Pacífico', 2], ['Leticia', 'Orinoquía y Amazonía', 1], ['Arauca', 'Orinoquía y Amazonía', 1]];
+  const disp = [['Rionegro', 'Andina'], ['Girardot', 'Andina'], ['Barrancabermeja', 'Andina'], ['Ocaña', 'Andina'], ['Turbo', 'Andina'], ['Apartadó', 'Andina'], ['Sogamoso', 'Andina'], ['Duitama', 'Andina'], ['Pitalito', 'Andina'], ['Aguachica', 'Caribe'], ['Magangué', 'Caribe'], ['Maicao', 'Caribe'], ['Ciénaga', 'Caribe'], ['Sabanalarga', 'Caribe'], ['Lorica', 'Caribe'], ['Tumaco', 'Pacífico'], ['Buenaventura', 'Pacífico'], ['Ipiales', 'Pacífico'], ['Tuluá', 'Pacífico'], ['Santander de Quilichao', 'Pacífico'], ['Granada', 'Orinoquía y Amazonía'], ['Puerto Gaitán', 'Orinoquía y Amazonía'], ['Florencia', 'Orinoquía y Amazonía'], ['Mocoa', 'Orinoquía y Amazonía'], ['San José del Guaviare', 'Orinoquía y Amazonía']];
+  const sitios = ['Farmacia', 'Dispensario', 'Centro de dispensación', 'Punto de entrega'];
+  const puntos = []; let n = 1;
+  caps.forEach(([c, reg, k]) => { for (let i = 1; i <= k; i++) puntos.push({ id: 'P' + String(n++).padStart(3, '0'), nombre: pick(sitios) + ' ' + c + (k > 1 ? ' ' + i : ''), ciudad: c, region: reg, tipo: 'Capital' }); });
+  let di = 0; while (puntos.length < 180) { const [c, reg] = disp[di % disp.length]; const k = Math.floor(di / disp.length) + 1; puntos.push({ id: 'P' + String(n++).padStart(3, '0'), nombre: pick(sitios) + ' ' + c + (k > 1 ? ' ' + k : ''), ciudad: c, region: reg, tipo: 'Disperso' }); di++; }
+  puntos.forEach(p => { p.reqTH = 1; const r = R(); p.reqT = r < .7 ? 1 : r < .9 ? 2 : 0; });
+  const marcas = { 'Termohigrómetro': [['Testo', '608-H1'], ['Elitech', 'RC-4HC'], ['Extech', 'RH520'], ['Vaisala', 'HM40']], 'Termómetro digital': [['Hanna', 'HI98509'], ['Fluke', '1551A'], ['Testo', '104'], ['Elitech', 'DT-3']] };
+  const labs = ['Metrolab S.A.S.', 'Calibraciones Andinas', 'Instrumetrik Colombia'], cnt = { TH: 0, TD: 0 }; const equipos = [], movs = []; let mseq = 1;
+  const mk = (tipo, puntoId, estado, ago) => {
+    const pf = PREF[tipo], codigo = pf + '-' + String(++cnt[pf]).padStart(4, '0'), [marca, modelo] = pick(marcas[tipo]);
+    const fechaCal = addDays(null, -ago), laboratorio = pick(labs);
+    const e = { id: codigo, codigo, tipo, marca, modelo, serie: 'S' + ri(100000, 999999), puntoId, estado, fechaCal, venc: addMonths(fechaCal, 12), laboratorio, certificado: R() < .05 ? '' : 'CC-' + fechaCal.slice(0, 4) + '-' + ri(1000, 9999), resultado: 'Conforme', envio: null };
+    equipos.push(e);
+    movs.push({ id: 'M' + mseq++, fecha: fechaCal, equipoId: codigo, tipo: 'Calibración registrada', origen: laboratorio, destino: puntoId || 'Bodega', guia: '', nota: 'Certificado ' + (e.certificado || 'pendiente') });
+    return e;
+  };
+  puntos.forEach(p => { for (let i = 0; i < p.reqTH; i++) mk('Termohigrómetro', p.id, 'En uso', ri(0, 395)); for (let i = 0; i < p.reqT; i++) mk('Termómetro digital', p.id, 'En uso', ri(0, 395)); });
+  for (let i = 0; i < 20; i++) mk(i < 11 ? 'Termohigrómetro' : 'Termómetro digital', null, 'Disponible', ri(5, 320));
+  const enUso = equipos.filter(e => e.estado === 'En uso');
+  const inflight = (e, estado, dias) => { e.estado = estado; e.envio = { fecha: addDays(null, -dias), guia: 'G' + ri(10000000, 99999999), transportadora: pick(['Servientrega', 'Interrapidísimo', 'Envía', 'Coordinadora']), laboratorio: e.laboratorio, recepcion: estado === 'En laboratorio' ? addDays(null, -dias + 2) : null }; movs.push({ id: 'M' + mseq++, fecha: e.envio.fecha, equipoId: e.id, tipo: 'Envío a calibración', origen: e.puntoId, destino: e.laboratorio, guia: e.envio.guia, nota: '' }); };
+  [2, 5, 9, 14, 19, 27].forEach((k, i) => inflight(enUso[k * 7 % enUso.length], 'En laboratorio', [6, 12, 18, 24, 9, 31][i]));
+  [3, 8, 11, 17].forEach((k, i) => inflight(enUso[(k * 11 + 3) % enUso.length], 'En tránsito', [1, 3, 7, 2][i]));
+  return { puntos, equipos, movs, cfg: { ...DEF_CFG }, seq: mseq, demo: true };
+}
+
+function load() { try { const raw = localStorage.getItem(LS_KEY); if (raw) { S = JSON.parse(raw); S.cfg = { ...DEF_CFG, ...S.cfg }; return; } } catch (e) { } S = seedData(); }
+function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) { } }
+function log(equipoId, tipo, origen, destino, guia, nota, fecha) { S.movs.push({ id: 'M' + (S.seq++), fecha: fecha || todayIso(), equipoId, tipo, origen: origen || '', destino: destino || '', guia: guia || '', nota: nota || '' }); }
+
+/* ---- Cálculos ---- */
+const eqById = id => S.equipos.find(e => e.id === id);
+const ptById = id => S.puntos.find(p => p.id === id);
+const ptName = id => { const p = ptById(id); return p ? p.nombre : (id || 'Bodega'); };
+
+function vigencia(e) { // estado metrológico
+  if (e.estado === 'Baja') return { k: 'baja', t: 'Baja', c: '' };
+  const d = daysTo(e.venc), c = S.cfg;
+  if (d === null) return { k: 'sin', t: 'Sin fecha', c: 'warn', d };
+  if (d < 0) return { k: 'vencido', t: 'Vencido hace ' + (-d) + ' d', c: 'crit', d };
+  if (d <= c.a3) return { k: 'critico', t: 'Vence en ' + d + ' d', c: 'crit', d };
+  if (d <= c.a2) return { k: 'proximo', t: 'Vence en ' + d + ' d', c: 'warn', d };
+  if (d <= c.a1) return { k: 'aviso', t: 'Vence en ' + d + ' d', c: 'info', d };
+  return { k: 'vigente', t: 'Vigente · ' + d + ' d', c: 'ok', d };
+}
+const valido = e => e.estado === 'En uso' && daysTo(e.venc) !== null && daysTo(e.venc) >= 0;
+
+function cobertura(p) {
+  const asign = S.equipos.filter(e => e.puntoId === p.id && e.estado !== 'Baja');
+  const faltas = [], riesgos = [];
+  [['Termohigrómetro', p.reqTH], ['Termómetro digital', p.reqT]].forEach(([tipo, req]) => {
+    if (!req) return;
+    const deTipo = asign.filter(e => e.tipo === tipo), ok = deTipo.filter(valido);
+    if (ok.length < req) {
+      const falta = req - ok.length, malo = deTipo.filter(e => !valido(e));
+      let causa = 'Sin equipo asignado';
+      if (malo.some(e => e.estado === 'En tránsito' || e.estado === 'En laboratorio')) causa = 'En calibración';
+      else if (malo.length) causa = 'Calibración vencida';
+      faltas.push({ tipo, falta, causa });
+    } else if (ok.slice(0, req).some(e => daysTo(e.venc) <= S.cfg.a2)) riesgos.push({ tipo });
+  });
+  const estado = faltas.length ? 'descubierto' : riesgos.length ? 'riesgo' : 'cubierto';
+  const prox = asign.filter(e => e.estado === 'En uso').map(e => e.venc).sort()[0] || null;
+  return { estado, faltas, riesgos, asign, prox };
+}
+function coberturaTodos() { return S.puntos.map(p => ({ p, c: cobertura(p) })); }
+
+function reemplazoPara(e, excluir) {
+  const ex = excluir || [];
+  const c = S.equipos.filter(x => x.estado === 'Disponible' && !x.puntoId && x.tipo === e.tipo && daysTo(x.venc) > S.cfg.a2 && !ex.includes(x.id));
+  const pt = ptById(e.puntoId) || ptById(e.puntoOrigen);
+  const score = x => 0;
+  c.sort((a, b) => (daysTo(b.venc) - daysTo(a.venc)));
+  return c[0] || null;
+}
+
+function genAlertas() {
+  const A = [], c = S.cfg, sev = { crit: 0, warn: 1, info: 2 };
+  S.equipos.forEach(e => {
+    if (e.estado === 'Baja') return;
+    const v = vigencia(e), pn = e.puntoId ? ptName(e.puntoId) : 'Bodega';
+    if (e.estado === 'En uso' || e.estado === 'Disponible') {
+      if (v.k === 'vencido') A.push({ sev: 'crit', tipo: 'Vencido', t: e.codigo + ' con calibración vencida', d: pn + ' · venció el ' + fmt(e.venc), ref: ['eq', e.id], n: v.d });
+      else if (v.k === 'critico') A.push({ sev: 'crit', tipo: 'Por vencer', t: e.codigo + ' vence en ' + v.d + ' días', d: pn + ' · ' + fmt(e.venc), ref: ['eq', e.id], n: v.d });
+      else if (v.k === 'proximo') A.push({ sev: 'warn', tipo: 'Por vencer', t: e.codigo + ' vence en ' + v.d + ' días', d: pn + ' · ' + fmt(e.venc), ref: ['eq', e.id], n: v.d });
+      else if (v.k === 'aviso') A.push({ sev: 'info', tipo: 'Planificar', t: e.codigo + ' vence en ' + v.d + ' días', d: pn + ' · ' + fmt(e.venc), ref: ['eq', e.id], n: v.d });
+    }
+    if (e.estado === 'En tránsito' && e.envio) { const t = daysSince(e.envio.fecha); if (t > c.maxTransito) A.push({ sev: 'warn', tipo: 'Envío demorado', t: e.codigo + ' lleva ' + t + ' días en tránsito', d: 'Guía ' + e.envio.guia + ' · ' + e.envio.transportadora, ref: ['eq', e.id], n: -t }); }
+    if (e.estado === 'En laboratorio' && e.envio) { const t = daysSince(e.envio.fecha); if (t > c.maxLab) A.push({ sev: 'warn', tipo: 'Calibración demorada', t: e.codigo + ' lleva ' + t + ' días fuera', d: e.envio.laboratorio + ' · se esperaba en ' + c.maxLab + ' días', ref: ['eq', e.id], n: -t }); }
+    if (e.estado === 'En uso' && !e.puntoId) A.push({ sev: 'warn', tipo: 'Datos', t: e.codigo + ' está en uso sin sitio asignado', d: 'Asigne un punto o devuélvalo a bodega', ref: ['eq', e.id], n: 0 });
+    if (!e.certificado && e.fechaCal) A.push({ sev: 'info', tipo: 'Datos', t: e.codigo + ' sin número de certificado', d: 'Registre el certificado de la última calibración', ref: ['eq', e.id], n: 99 });
+    if (e.resultado === 'No conforme') A.push({ sev: 'crit', tipo: 'No conforme', t: e.codigo + ' resultó no conforme', d: 'Evaluar el impacto en producto almacenado desde la calibración anterior', ref: ['eq', e.id], n: -1 });
+  });
+  coberturaTodos().forEach(({ p, c: cv }) => {
+    if (cv.estado === 'descubierto') { const f = cv.faltas.map(x => x.tipo.toLowerCase() + ' (' + x.causa.toLowerCase() + ')').join(', '); A.push({ sev: 'crit', tipo: 'Punto descubierto', t: p.nombre + ' sin cobertura', d: p.id + ' · ' + f, ref: ['pt', p.id], n: -2 }); }
+  });
+  A.sort((a, b) => sev[a.sev] - sev[b.sev] || a.n - b.n);
+  return A;
+}
+/* ============ INTERFAZ: router, modales, panel, alertas, equipos ============ */
+const IC = {
+  panel: '<path d="M3 13h7V3H3zM14 21h7v-8h-7zM14 10h7V3h-7zM3 21h7v-5H3z"/>',
+  alertas: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+  equipos: '<path d="M14 4v10.5a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0z"/>',
+  puntos: '<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>',
+  logistica: '<path d="M1 3h15v13H1zM16 8h4l3 3v5h-7zM5.5 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18.5 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>',
+  planificador: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  ajustes: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'
+};
+const VIEWS = [['panel', 'Panel'], ['alertas', 'Alertas'], ['equipos', 'Equipos'], ['puntos', 'Puntos'], ['logistica', 'Logística'], ['planificador', 'Planificador'], ['ajustes', 'Ajustes']];
+const F = { eq: { q: '', tipo: '', estado: '', vig: '', page: 1 }, pt: { q: '', tipo: '', region: '', cob: '', page: 1 }, al: { sev: '', tipo: '' }, lg: { tab: 'transito', q: '', page: 1 }, pl: { dias: 60, sel: {} } };
+const PAGE = 25;
+const pill = (c, t) => `<span class="pill ${c || ''}">${esc(t)}</span>`;
+const vigPill = e => { const v = vigencia(e); return pill(v.c, v.t); };
+const estPill = e => pill({ 'En uso': 'ok', 'Disponible': 'info', 'En tránsito': 'warn', 'En laboratorio': 'warn', 'Baja': '' }[e.estado], e.estado);
+const cobPill = c => c.estado === 'cubierto' ? pill('ok', 'Cubierto') : c.estado === 'riesgo' ? pill('warn', 'En riesgo') : pill('crit', 'Descubierto');
+
+function toast(m) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = m; $('#toasts').appendChild(t); setTimeout(() => t.remove(), 3800); }
+function openModal(title, body, foot, wide) {
+  const o = $('#overlay'); o.hidden = false;
+  o.innerHTML = `<div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="modal-h"><h2>${title}</h2><button class="btn sm ghost" data-act="close" type="button" aria-label="Cerrar">Cerrar</button></div><div class="modal-b">${body}</div>${foot ? `<div class="modal-f">${foot}</div>` : ''}</div>`;
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() { const o = $('#overlay'); o.hidden = true; o.innerHTML = ''; document.body.style.overflow = ''; }
+function confirmModal(msg, onOk, label) {
+  openModal('Confirmar', `<p>${msg}</p>`, `<button class="btn" data-act="close" type="button">Cancelar</button><button class="btn danger" id="cfOk" type="button">${label || 'Confirmar'}</button>`);
+  $('#cfOk').onclick = () => { closeModal(); onOk(); };
+}
+function exportModal(nombre, texto, mime) {
+  openModal('Exportar ' + esc(nombre), `<textarea id="exTxt" readonly rows="10">${esc(texto)}</textarea><div class="small muted">Si la descarga está bloqueada en este visor, copie el contenido y péguelo en un archivo.</div>`,
+    `<button class="btn" id="exCp" type="button">Copiar</button><button class="btn primary" id="exDl" type="button">Descargar</button>`, true);
+  $('#exCp').onclick = async () => { try { await navigator.clipboard.writeText(texto); toast('Copiado'); } catch (e) { $('#exTxt').select(); toast('Seleccionado: use Ctrl+C'); } };
+  $('#exDl').onclick = () => { try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([texto], { type: mime || 'text/plain' })); a.download = nombre; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { toast('Descarga bloqueada: use Copiar'); } };
+}
+const csvCell = v => { v = String(v ?? ''); return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+const toCSV = (head, rows) => [head.join(','), ...rows.map(r => r.map(csvCell).join(','))].join('\n');
+
+/* ---- router ---- */
+let current = 'panel';
+function route() { const h = (location.hash || '').replace('#', ''); current = VIEWS.some(v => v[0] === h) ? h : 'panel'; render(); }
+function go(v) { if (location.hash === '#' + v) render(); else location.hash = v; }
+function renderNav() {
+  const crit = genAlertas().filter(a => a.sev === 'crit').length;
+  $('#nav').innerHTML = VIEWS.map(([k, t]) => `<a href="#${k}" ${k === current ? 'aria-current="page"' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IC[k]}</svg>${t}${k === 'alertas' && crit ? `<span class="badge">${crit}</span>` : ''}</a>`).join('');
+  $('#hoy').textContent = 'Hoy: ' + fmt(todayIso());
+}
+function render() {
+  const meta = { panel: ['Panel de control', 'Estado de la calibración y de la cobertura en los 180 puntos'], alertas: ['Alertas', 'Todo lo que requiere una decisión o una acción'], equipos: ['Equipos de medición', 'Inventario, vigencia y trazabilidad de cada equipo'], puntos: ['Puntos de operación', 'Cobertura metrológica por sitio'], logistica: ['Logística de calibración', 'Envíos, recepción en laboratorio y retornos'], planificador: ['Planificador', 'Qué enviar, cuándo y con qué reemplazo'], ajustes: ['Ajustes y datos', 'Parámetros de alerta, importación y exportación'] }[current];
+  $('#viewTitle').textContent = meta[0]; $('#viewSub').textContent = meta[1]; document.title = meta[0] + ' · Control Metrológico';
+  $('#banner').innerHTML = S.demo ? `<div class="banner"><span><b>Datos de ejemplo.</b> Cargue sus equipos y puntos reales para empezar a operar.</span><button class="btn sm" data-act="goto" data-v="ajustes" type="button">Importar mis datos</button></div>` : '';
+  $('#topActions').innerHTML = { equipos: '<button class="btn primary" data-act="eqNew" type="button">+ Nuevo equipo</button>', puntos: '<button class="btn primary" data-act="ptNew" type="button">+ Nuevo punto</button>', logistica: '<button class="btn primary" data-act="envio" type="button">+ Nuevo envío a calibración</button>' }[current] || '';
+  renderNav(); VIEWFN[current]();
+  window.scrollTo(0, 0);
+}
+
+/* ---- Panel ---- */
+function vPanel() {
+  const act = S.equipos.filter(e => e.estado !== 'Baja'), cov = coberturaTodos(), c = S.cfg;
+  const desc = cov.filter(x => x.c.estado === 'descubierto').length, ries = cov.filter(x => x.c.estado === 'riesgo').length;
+  const venc = act.filter(e => ['En uso', 'Disponible'].includes(e.estado) && daysTo(e.venc) < 0).length;
+  const prox = act.filter(e => ['En uso', 'Disponible'].includes(e.estado) && daysTo(e.venc) >= 0 && daysTo(e.venc) <= c.a2).length;
+  const fuera = act.filter(e => e.estado === 'En tránsito' || e.estado === 'En laboratorio').length;
+  const pct = Math.round(100 * (S.puntos.length - desc) / Math.max(1, S.puntos.length));
+  const al = genAlertas();
+  // vencimientos por mes
+  const base = today0(), meses = [], cuenta = [];
+  for (let i = 0; i < 12; i++) { const d = new Date(base.getFullYear(), base.getMonth() + i, 1, 12); meses.push(d.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '')); cuenta.push(0); }
+  let vencidos = 0;
+  act.filter(e => ['En uso', 'Disponible'].includes(e.estado) && e.venc).forEach(e => { if (daysTo(e.venc) < 0) { vencidos++; return; } const d = pd(e.venc), idx = (d.getFullYear() - base.getFullYear()) * 12 + d.getMonth() - base.getMonth(); if (idx >= 0 && idx < 12) cuenta[idx]++; });
+  const mx = Math.max(1, vencidos, ...cuenta);
+  const bar = (n, lab, cls) => `<div class="b ${cls}"><span class="n">${n}</span><i style="height:${Math.round(100 * n / mx)}%"></i><span class="m">${lab}</span></div>`;
+  const reg = REGIONES.map(r => { const xs = cov.filter(x => x.p.region === r); const ok = xs.filter(x => x.c.estado !== 'descubierto').length; const pc = xs.length ? Math.round(100 * ok / xs.length) : 0; return `<div class="rowline"><span>${r}</span><div class="meter"><i style="width:${pc}%;background:${pc >= 95 ? 'var(--ok)' : pc >= 85 ? 'var(--warn)' : 'var(--crit)'}"></i></div><span class="num mono right">${pc}%</span></div>`; }).join('');
+  const est = ['En uso', 'Disponible', 'En tránsito', 'En laboratorio'].map((k, i) => [k, act.filter(e => e.estado === k).length, ['var(--accent)', 'var(--info)', 'var(--warn)', 'var(--crit)'][i]]);
+  const tot = act.length || 1;
+  $('#view').innerHTML = `
+  <div class="grid g-kpi">
+    <button class="kpi ${pct >= 97 ? 'ok' : pct >= 90 ? 'warn' : 'crit'}" data-act="kpi" data-k="cob" type="button"><span class="l">Puntos con cobertura</span><span class="v">${pct}%</span><span class="s">${S.puntos.length - desc} de ${S.puntos.length} puntos</span></button>
+    <button class="kpi ${desc ? 'crit' : 'ok'}" data-act="kpi" data-k="desc" type="button"><span class="l">Puntos descubiertos</span><span class="v">${desc}</span><span class="s">${ries} más en riesgo</span></button>
+    <button class="kpi ${venc ? 'crit' : 'ok'}" data-act="kpi" data-k="venc" type="button"><span class="l">Calibración vencida</span><span class="v">${venc}</span><span class="s">equipos fuera de vigencia</span></button>
+    <button class="kpi ${prox ? 'warn' : 'ok'}" data-act="kpi" data-k="prox" type="button"><span class="l">Vencen en ${c.a2} días</span><span class="v">${prox}</span><span class="s">a programar</span></button>
+    <button class="kpi" data-act="kpi" data-k="fuera" type="button"><span class="l">Fuera para calibración</span><span class="v">${fuera}</span><span class="s">en tránsito o laboratorio</span></button>
+  </div>
+  <div class="grid g-2">
+    <section class="card"><div class="card-h"><h2>Requiere acción</h2><button class="btn sm" data-act="goto" data-v="alertas" type="button">Ver las ${al.length} alertas</button></div>
+      <div style="padding-top:8px">${al.slice(0, 7).map(alertRow).join('') || '<div class="empty">Sin alertas. Todo está al día.</div>'}</div></section>
+    <div class="stack">
+      <section class="card"><div class="card-h"><h2>Cobertura por región</h2></div><div class="card-b">${reg}</div></section>
+      <section class="card"><div class="card-h"><h2>Estado de la flota</h2><span class="muted small">${act.length} equipos activos</span></div><div class="card-b stack">
+        <div class="meter" style="height:12px">${est.map(([k, n, col]) => `<i style="width:${100 * n / tot}%;background:${col}" title="${k}: ${n}"></i>`).join('')}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px" class="small">${est.map(([k, n, col]) => `<span><span class="dot" style="display:inline-block;background:${col};margin-right:6px"></span>${k} <b class="mono">${n}</b></span>`).join('')}</div></div></section>
+    </div>
+  </div>
+  <section class="card"><div class="card-h"><h2>Vencimientos de los próximos 12 meses</h2><span class="muted small">Equipos activos por mes de vencimiento</span></div><div class="card-b"><div class="bars">${bar(vencidos, 'Venc.', 'hot')}${cuenta.map((n, i) => bar(n, meses[i], i < 1 ? 'mid' : '')).join('')}</div></div></section>`;
+}
+function alertRow(a) {
+  const lab = a.ref[0] === 'eq' ? 'Abrir equipo' : 'Abrir punto';
+  return `<div class="alert"><span class="dot ${a.sev}"></span><div style="min-width:0"><b>${esc(a.t)}</b><div class="d">${pill(a.sev === 'crit' ? 'crit' : a.sev === 'warn' ? 'warn' : 'info', a.tipo)} <span>${esc(a.d)}</span></div></div><button class="btn sm" data-act="${a.ref[0] === 'eq' ? 'eqOpen' : 'ptOpen'}" data-id="${esc(a.ref[1])}" type="button">${lab}</button></div>`;
+}
+
+/* ---- Alertas ---- */
+function vAlertas() {
+  const all = genAlertas(), f = F.al, tipos = [...new Set(all.map(a => a.tipo))];
+  const lst = all.filter(a => (!f.sev || a.sev === f.sev) && (!f.tipo || a.tipo === f.tipo));
+  $('#view').innerHTML = `<section class="card"><div class="toolbar"><select data-f="al.sev" aria-label="Severidad"><option value="">Toda severidad</option><option value="crit" ${f.sev === 'crit' ? 'selected' : ''}>Crítica</option><option value="warn" ${f.sev === 'warn' ? 'selected' : ''}>Advertencia</option><option value="info" ${f.sev === 'info' ? 'selected' : ''}>Informativa</option></select>
+  <select data-f="al.tipo" aria-label="Tipo"><option value="">Todo tipo</option>${tipos.map(t => `<option ${f.tipo === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>
+  <span class="muted small">${lst.length} alertas</span><button class="btn sm" style="margin-left:auto" data-act="alExport" type="button">Exportar CSV</button></div>
+  <div id="alres">${lst.slice(0, 120).map(alertRow).join('') || '<div class="empty">No hay alertas con este filtro.</div>'}${lst.length > 120 ? `<div class="pager">Se muestran 120 de ${lst.length}. Afine el filtro.</div>` : ''}</div></section>`;
+}
+/* ============ EQUIPOS y PUNTOS ============ */
+const opt = (arr, sel, all) => (all ? `<option value="">${all}</option>` : '') + arr.map(x => { const v = Array.isArray(x) ? x[0] : x, t = Array.isArray(x) ? x[1] : x; return `<option value="${esc(v)}" ${String(sel) === String(v) ? 'selected' : ''}>${esc(t)}</option>`; }).join('');
+function pager(total, page, key) {
+  const pages = Math.max(1, Math.ceil(total / PAGE));
+  return `<div class="pager"><span>${total} resultados · página ${Math.min(page, pages)} de ${pages}</span><span style="display:flex;gap:6px"><button class="btn sm" data-act="pg" data-k="${key}" data-d="-1" ${page <= 1 ? 'disabled' : ''} type="button">Anterior</button><button class="btn sm" data-act="pg" data-k="${key}" data-d="1" ${page >= pages ? 'disabled' : ''} type="button">Siguiente</button></span></div>`;
+}
+function eqFiltered() {
+  const f = F.eq, q = f.q.trim().toLowerCase();
+  return S.equipos.filter(e => {
+    if (q && !(e.codigo + ' ' + e.serie + ' ' + e.marca + ' ' + e.modelo + ' ' + ptName(e.puntoId) + ' ' + (e.puntoId || '')).toLowerCase().includes(q)) return false;
+    if (f.tipo && e.tipo !== f.tipo) return false;
+    if (f.estado && e.estado !== f.estado) return false;
+    if (f.vig) { const v = vigencia(e), active = ['En uso', 'Disponible'].includes(e.estado); if (f.vig === 'vencido' && !(active && v.k === 'vencido')) return false; if (f.vig === 'porvencer' && !(active && ['critico', 'proximo'].includes(v.k))) return false; if (f.vig === 'aviso' && !(active && v.k === 'aviso')) return false; if (f.vig === 'vigente' && !(active && v.k === 'vigente')) return false; }
+    return true;
+  }).sort((a, b) => (a.venc || '9').localeCompare(b.venc || '9'));
+}
+function vEquipos() {
+  const f = F.eq;
+  $('#view').innerHTML = `<section class="card"><div class="toolbar"><input class="grow" type="search" id="eqq" data-f="eq.q" value="${esc(f.q)}" placeholder="Buscar por código, serie, marca o sitio" aria-label="Buscar equipo">
+  <select data-f="eq.tipo" aria-label="Tipo">${opt(TIPOS, f.tipo, 'Todo tipo')}</select>
+  <select data-f="eq.estado" aria-label="Estado">${opt(ESTADOS, f.estado, 'Todo estado')}</select>
+  <select data-f="eq.vig" aria-label="Vigencia">${opt([['vencido', 'Vencidos'], ['porvencer', 'Vencen pronto'], ['aviso', 'A planificar'], ['vigente', 'Vigentes']], f.vig, 'Toda vigencia')}</select>
+  <button class="btn" data-act="eqExport" type="button">Exportar CSV</button></div><div id="eqres"></div></section>`;
+  eqRes();
+}
+function eqRes() {
+  const l = eqFiltered(), f = F.eq, pages = Math.max(1, Math.ceil(l.length / PAGE)); if (f.page > pages) f.page = pages;
+  const rows = l.slice((f.page - 1) * PAGE, f.page * PAGE).map(e => `<tr class="click" data-act="eqOpen" data-id="${esc(e.id)}"><td class="mono"><b>${esc(e.codigo)}</b></td><td>${esc(e.tipo)}<div class="muted small">${esc(e.marca)} ${esc(e.modelo)}</div></td><td>${e.puntoId ? esc(ptName(e.puntoId)) + `<div class="muted small mono">${esc(e.puntoId)}</div>` : '<span class="muted">Bodega</span>'}</td><td>${estPill(e)}</td><td>${fmt(e.fechaCal)}</td><td>${fmt(e.venc)}</td><td>${vigPill(e)}</td></tr>`).join('');
+  $('#eqres').innerHTML = `<div class="tw"><table><thead><tr><th>Código</th><th>Equipo</th><th>Sitio</th><th>Estado</th><th>Última calibración</th><th>Vence</th><th>Vigencia</th></tr></thead><tbody>${rows || '<tr><td colspan="7" class="empty">Ningún equipo coincide con el filtro.</td></tr>'}</tbody></table></div>${pager(l.length, f.page, 'eq')}`;
+}
+function eqExport() {
+  exportModal('equipos.csv', toCSV(['codigo', 'tipo', 'marca', 'modelo', 'serie', 'punto_id', 'punto', 'estado', 'fecha_calibracion', 'vencimiento', 'laboratorio', 'certificado', 'resultado'], S.equipos.map(e => [e.codigo, e.tipo, e.marca, e.modelo, e.serie, e.puntoId || '', e.puntoId ? ptName(e.puntoId) : '', e.estado, e.fechaCal, e.venc, e.laboratorio, e.certificado, e.resultado])), 'text/csv');
+}
+
+function eqOpen(id) {
+  const e = eqById(id); if (!e) return;
+  const hist = S.movs.filter(m => m.equipoId === id).sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id.localeCompare(a.id));
+  const v = vigencia(e), can = e.estado === 'En uso' || e.estado === 'Disponible';
+  const btn = (a, t, cls) => `<button class="btn ${cls || ''}" data-act="${a}" data-id="${esc(id)}" type="button">${t}</button>`;
+  let foot = btn('eqEdit', 'Editar');
+  if (can) foot += btn('asignar', e.puntoId ? 'Trasladar' : 'Asignar a punto') + (e.puntoId ? btn('aBodega', 'Devolver a bodega') : '') + btn('envio', 'Enviar a calibración', 'primary');
+  if (e.estado === 'En tránsito') foot += btn('recepcion', 'Confirmar recepción en laboratorio') + btn('retorno', 'Registrar retorno', 'primary');
+  if (e.estado === 'En laboratorio') foot += btn('retorno', 'Registrar retorno calibrado', 'primary');
+  if (e.estado !== 'Baja') foot += btn('baja', 'Dar de baja', 'danger');
+  const pto = e.puntoId || e.puntoOrigen;
+  openModal(`<span class="mono">${esc(e.codigo)}</span> · ${esc(e.tipo)}`, `
+  <div style="display:flex;gap:8px;flex-wrap:wrap">${estPill(e)}${vigPill(e)}${e.resultado === 'No conforme' ? pill('crit', 'No conforme') : ''}</div>
+  <div class="kv"><div><span>Marca / modelo</span><b>${esc(e.marca)} ${esc(e.modelo)}</b></div><div><span>Serie</span><b class="mono">${esc(e.serie)}</b></div><div><span>Sitio</span><b>${pto ? esc(ptName(pto)) : 'Bodega'}</b></div><div><span>Última calibración</span><b>${fmt(e.fechaCal)}</b></div><div><span>Vencimiento</span><b>${fmt(e.venc)}</b></div><div><span>Laboratorio</span><b>${esc(e.laboratorio || '—')}</b></div><div><span>Certificado</span><b class="mono">${esc(e.certificado || 'Pendiente')}</b></div>${e.envio ? `<div><span>Envío en curso</span><b class="mono">${esc(e.envio.guia)}</b><span>${esc(e.envio.transportadora)} · ${daysSince(e.envio.fecha)} d</span></div>` : ''}</div>
+  <div><h3 style="margin-bottom:6px">Historial</h3><div class="timeline">${hist.map(m => `<div class="t"><span class="muted mono small">${fmt(m.fecha)}</span><span><b>${esc(m.tipo)}</b> ${m.origen || m.destino ? `<span class="muted">· ${esc(ptName(m.origen) || m.origen)} → ${esc(ptName(m.destino) || m.destino)}</span>` : ''}${m.guia ? ` <span class="mono small">${esc(m.guia)}</span>` : ''}${m.nota ? `<div class="muted small">${esc(m.nota)}</div>` : ''}</span></div>`).join('') || '<div class="muted">Sin movimientos.</div>'}</div></div>`, foot, true);
+}
+
+function eqForm(id) {
+  const e = id ? eqById(id) : { tipo: TIPOS[0], estado: 'Disponible', fechaCal: todayIso(), venc: addMonths(todayIso(), S.cfg.meses), puntoId: '', resultado: 'Conforme' };
+  const labs = [...new Set(S.equipos.map(x => x.laboratorio).filter(Boolean))];
+  openModal(id ? 'Editar ' + esc(id) : 'Nuevo equipo', `<div class="form">
+  <label>Código<input type="text" id="f_cod" value="${esc(e.codigo || '')}" placeholder="TH-0001"></label>
+  <label>Tipo<select id="f_tipo">${opt(TIPOS, e.tipo)}</select></label>
+  <label>Marca<input type="text" id="f_marca" value="${esc(e.marca || '')}"></label>
+  <label>Modelo<input type="text" id="f_modelo" value="${esc(e.modelo || '')}"></label>
+  <label>Serie<input type="text" id="f_serie" value="${esc(e.serie || '')}"></label>
+  <label>Estado<select id="f_estado">${opt(ESTADOS, e.estado)}</select></label>
+  <label>Punto asignado<select id="f_pto"><option value="">Bodega (sin punto)</option>${S.puntos.map(p => `<option value="${esc(p.id)}" ${e.puntoId === p.id ? 'selected' : ''}>${esc(p.id + ' · ' + p.nombre)}</option>`).join('')}</select></label>
+  <label>Fecha de calibración<input type="date" id="f_cal" value="${esc(e.fechaCal || '')}"></label>
+  <label>Vencimiento<input type="date" id="f_venc" value="${esc(e.venc || '')}"></label>
+  <label>Laboratorio<input type="text" id="f_lab" list="dl_labs" value="${esc(e.laboratorio || '')}"><datalist id="dl_labs">${labs.map(l => `<option value="${esc(l)}">`).join('')}</datalist></label>
+  <label>N.º de certificado<input type="text" id="f_cert" value="${esc(e.certificado || '')}"></label>
+  <label>Resultado<select id="f_res">${opt(['Conforme', 'No conforme'], e.resultado)}</select></label></div>
+  <div class="hint">El vencimiento se calcula a ${S.cfg.meses} meses desde la fecha de calibración. Puede ajustarlo a mano.</div>`,
+    `<button class="btn" data-act="close" type="button">Cancelar</button><button class="btn primary" id="f_ok" type="button">Guardar</button>`);
+  $('#f_cal').onchange = () => { if ($('#f_cal').value) $('#f_venc').value = addMonths($('#f_cal').value, S.cfg.meses); };
+  if (!id) { const sync = () => { const pf = PREF[$('#f_tipo').value]; const n = S.equipos.filter(x => x.codigo.startsWith(pf + '-')).length + 1; if (!$('#f_cod').dataset.t) $('#f_cod').value = pf + '-' + String(n).padStart(4, '0'); }; $('#f_cod').oninput = () => $('#f_cod').dataset.t = 1; $('#f_tipo').onchange = sync; sync(); }
+  $('#f_ok').onclick = () => {
+    const cod = $('#f_cod').value.trim(); if (!cod) return toast('Escriba el código del equipo');
+    if (S.equipos.some(x => x.codigo === cod && x.id !== id)) return toast('Ya existe un equipo con ese código');
+    const d = { codigo: cod, tipo: $('#f_tipo').value, marca: $('#f_marca').value.trim(), modelo: $('#f_modelo').value.trim(), serie: $('#f_serie').value.trim(), estado: $('#f_estado').value, puntoId: $('#f_pto').value || null, fechaCal: $('#f_cal').value, venc: $('#f_venc').value, laboratorio: $('#f_lab').value.trim(), certificado: $('#f_cert').value.trim(), resultado: $('#f_res').value };
+    if (id) { Object.assign(eqById(id), d); toast('Equipo actualizado'); } else { S.equipos.push({ id: cod, ...d, envio: null }); log(cod, 'Alta de equipo', '', d.puntoId || 'Bodega', '', 'Alta en inventario'); toast('Equipo creado'); }
+    save(); closeModal(); render();
+  };
+}
+function asignarForm(id) {
+  const e = eqById(id), cov = coberturaTodos();
+  openModal('Asignar ' + esc(e.codigo) + ' a un punto', `<label class="form" style="display:block"><span class="muted small">Punto de destino</span><select id="a_pto">${S.puntos.map(p => { const c = cov.find(x => x.p.id === p.id).c, need = c.faltas.some(f => f.tipo === e.tipo); return `<option value="${esc(p.id)}">${esc(p.id + ' · ' + p.nombre)}${need ? '  — necesita este tipo' : ''}</option>`; }).join('')}</select></label>${daysTo(e.venc) < 0 ? '<div class="hint crit">Este equipo tiene la calibración vencida. No cubrirá el punto hasta recalibrarse.</div>' : ''}`,
+    `<button class="btn" data-act="close" type="button">Cancelar</button><button class="btn primary" id="a_ok" type="button">Asignar</button>`);
+  $('#a_ok').onclick = () => { instalar(id, $('#a_pto').value); closeModal(); render(); };
+}
+function instalar(id, pid) { const e = eqById(id), prev = e.puntoId; e.puntoId = pid; e.estado = 'En uso'; log(id, prev ? 'Traslado entre puntos' : 'Instalación en punto', prev || 'Bodega', pid, '', ''); save(); toast(e.codigo + ' instalado en ' + ptName(pid)); }
+
+/* ---- Puntos ---- */
+function ptFiltered() {
+  const f = F.pt, q = f.q.trim().toLowerCase();
+  return coberturaTodos().filter(({ p, c }) => (!q || (p.id + ' ' + p.nombre + ' ' + p.ciudad).toLowerCase().includes(q)) && (!f.tipo || p.tipo === f.tipo) && (!f.region || p.region === f.region) && (!f.cob || c.estado === f.cob)).sort((a, b) => ['descubierto', 'riesgo', 'cubierto'].indexOf(a.c.estado) - ['descubierto', 'riesgo', 'cubierto'].indexOf(b.c.estado) || a.p.id.localeCompare(b.p.id));
+}
+function vPuntos() {
+  const f = F.pt;
+  $('#view').innerHTML = `<section class="card"><div class="toolbar"><input class="grow" type="search" data-f="pt.q" value="${esc(f.q)}" placeholder="Buscar por código, nombre o ciudad" aria-label="Buscar punto">
+  <select data-f="pt.tipo" aria-label="Tipo de punto">${opt(['Capital', 'Disperso'], f.tipo, 'Capital y disperso')}</select>
+  <select data-f="pt.region" aria-label="Región">${opt(REGIONES, f.region, 'Toda región')}</select>
+  <select data-f="pt.cob" aria-label="Cobertura">${opt([['descubierto', 'Descubiertos'], ['riesgo', 'En riesgo'], ['cubierto', 'Cubiertos']], f.cob, 'Toda cobertura')}</select>
+  <button class="btn" data-act="ptExport" type="button">Exportar CSV</button></div><div id="ptres"></div></section>`;
+  ptRes();
+}
+function ptRes() {
+  const l = ptFiltered(), f = F.pt, pages = Math.max(1, Math.ceil(l.length / PAGE)); if (f.page > pages) f.page = pages;
+  const rows = l.slice((f.page - 1) * PAGE, f.page * PAGE).map(({ p, c }) => `<tr class="click" data-act="ptOpen" data-id="${esc(p.id)}"><td class="mono"><b>${esc(p.id)}</b></td><td>${esc(p.nombre)}<div class="muted small">${esc(p.ciudad)} · ${esc(p.region)}</div></td><td>${pill('', p.tipo)}</td><td class="small">${p.reqTH} TH · ${p.reqT} TD</td><td>${cobPill(c)}${c.faltas.length ? `<div class="muted small">${esc(c.faltas.map(x => x.causa).join(', '))}</div>` : ''}</td><td>${fmt(c.prox)}</td></tr>`).join('');
+  $('#ptres').innerHTML = `<div class="tw"><table><thead><tr><th>Código</th><th>Punto</th><th>Tipo</th><th>Requiere</th><th>Cobertura</th><th>Próx. vencimiento</th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="empty">Ningún punto coincide con el filtro.</td></tr>'}</tbody></table></div>${pager(l.length, f.page, 'pt')}`;
+}
+function ptExport() { exportModal('puntos.csv', toCSV(['id', 'nombre', 'ciudad', 'region', 'tipo', 'req_th', 'req_t', 'cobertura'], S.puntos.map(p => [p.id, p.nombre, p.ciudad, p.region, p.tipo, p.reqTH, p.reqT, cobertura(p).estado])), 'text/csv'); }
+function ptOpen(id) {
+  const p = ptById(id); if (!p) return; const c = cobertura(p);
+  const sug = c.faltas.map(f => { const r = reemplazoPara({ tipo: f.tipo, puntoId: p.id }); return `<div class="pick" style="cursor:default"><span class="dot crit"></span><span>Falta <b>${f.falta} ${esc(f.tipo.toLowerCase())}</b> · ${esc(f.causa)}${r ? `<div class="muted small">Disponible en bodega: <span class="mono">${esc(r.codigo)}</span> vigente hasta ${fmt(r.venc)}</div>` : '<div class="muted small">No hay reemplazo disponible en bodega. Programe compra o devolución anticipada.</div>'}</span>${r ? `<button class="btn sm primary" data-act="install" data-eq="${esc(r.id)}" data-pt="${esc(p.id)}" type="button">Instalar</button>` : ''}</div>`; }).join('');
+  openModal(`<span class="mono">${esc(p.id)}</span> · ${esc(p.nombre)}`, `<div style="display:flex;gap:8px;flex-wrap:wrap">${cobPill(c)}${pill('', p.tipo)}${pill('', p.ciudad + ' · ' + p.region)}</div>
+  <div class="kv"><div><span>Requiere</span><b>${p.reqTH} termohigrómetro · ${p.reqT} termómetro</b></div><div><span>Próximo vencimiento</span><b>${fmt(c.prox)}</b></div></div>
+  ${sug ? `<div><h3 style="margin-bottom:6px">Para recuperar la cobertura</h3><div class="picklist">${sug}</div></div>` : ''}
+  <div><h3 style="margin-bottom:6px">Equipos asignados</h3><div class="tw"><table><thead><tr><th>Código</th><th>Tipo</th><th>Estado</th><th>Vigencia</th></tr></thead><tbody>${c.asign.map(e => `<tr class="click" data-act="eqOpen" data-id="${esc(e.id)}"><td class="mono"><b>${esc(e.codigo)}</b></td><td>${esc(e.tipo)}</td><td>${estPill(e)}</td><td>${vigPill(e)}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">Sin equipos asignados.</td></tr>'}</tbody></table></div></div>`,
+    `<button class="btn" data-act="ptEdit" data-id="${esc(id)}" type="button">Editar punto</button>`, true);
+}
+function ptForm(id) {
+  const p = id ? ptById(id) : { id: 'P' + String(S.puntos.length + 1).padStart(3, '0'), tipo: 'Capital', region: REGIONES[0], reqTH: 1, reqT: 1 };
+  openModal(id ? 'Editar ' + esc(id) : 'Nuevo punto', `<div class="form">
+  <label>Código<input type="text" id="p_id" value="${esc(p.id)}" ${id ? 'readonly' : ''}></label><label>Nombre<input type="text" id="p_nom" value="${esc(p.nombre || '')}"></label>
+  <label>Ciudad<input type="text" id="p_ciu" value="${esc(p.ciudad || '')}"></label><label>Región<select id="p_reg">${opt(REGIONES, p.region)}</select></label>
+  <label>Tipo<select id="p_tipo">${opt(['Capital', 'Disperso'], p.tipo)}</select></label>
+  <label>Termohigrómetros requeridos<input type="number" min="0" id="p_th" value="${p.reqTH}"></label><label>Termómetros requeridos<input type="number" min="0" id="p_t" value="${p.reqT}"></label></div>`,
+    `<button class="btn" data-act="close" type="button">Cancelar</button><button class="btn primary" id="p_ok" type="button">Guardar</button>`);
+  $('#p_ok').onclick = () => {
+    const d = { id: $('#p_id').value.trim(), nombre: $('#p_nom').value.trim(), ciudad: $('#p_ciu').value.trim(), region: $('#p_reg').value, tipo: $('#p_tipo').value, reqTH: +$('#p_th').value || 0, reqT: +$('#p_t').value || 0 };
+    if (!d.id || !d.nombre) return toast('Código y nombre son obligatorios');
+    if (!id && ptById(d.id)) return toast('Ya existe un punto con ese código');
+    if (id) Object.assign(ptById(id), d); else S.puntos.push(d);
+    save(); closeModal(); toast('Punto guardado'); render();
+  };
+}
+/* ============ LOGÍSTICA: envíos, recepción, retorno ============ */
+const ENV = { sel: new Set(), q: '' };
+function vLogistica() {
+  const f = F.lg, n1 = S.equipos.filter(e => e.estado === 'En tránsito').length, n2 = S.equipos.filter(e => e.estado === 'En laboratorio').length;
+  const tab = (k, t) => `<button role="tab" aria-selected="${f.tab === k}" data-act="lgTab" data-k="${k}" type="button">${t}</button>`;
+  $('#view').innerHTML = `<section class="card"><div class="tabs" role="tablist">${tab('transito', 'En tránsito (' + n1 + ')')}${tab('laboratorio', 'En laboratorio (' + n2 + ')')}${tab('historial', 'Historial de movimientos')}</div>
+  ${f.tab === 'historial' ? `<div class="toolbar"><input class="grow" type="search" data-f="lg.q" value="${esc(f.q)}" placeholder="Buscar por equipo, guía o tipo de movimiento" aria-label="Buscar movimiento"><button class="btn" data-act="movExport" type="button">Exportar CSV</button></div>` : ''}<div id="lgres"></div></section>`;
+  lgRes();
+}
+function lgRes() {
+  const f = F.lg;
+  if (f.tab === 'historial') {
+    const q = f.q.trim().toLowerCase(), l = S.movs.filter(m => !q || (m.equipoId + ' ' + m.guia + ' ' + m.tipo + ' ' + m.origen + ' ' + m.destino).toLowerCase().includes(q)).sort((a, b) => b.fecha.localeCompare(a.fecha) || (+b.id.slice(1)) - (+a.id.slice(1)));
+    const pages = Math.max(1, Math.ceil(l.length / PAGE)); if (f.page > pages) f.page = pages;
+    $('#lgres').innerHTML = `<div class="tw"><table><thead><tr><th>Fecha</th><th>Equipo</th><th>Movimiento</th><th>Origen</th><th>Destino</th><th>Guía</th><th>Nota</th></tr></thead><tbody>${l.slice((f.page - 1) * PAGE, f.page * PAGE).map(m => `<tr class="click" data-act="eqOpen" data-id="${esc(m.equipoId)}"><td>${fmt(m.fecha)}</td><td class="mono"><b>${esc(m.equipoId)}</b></td><td>${esc(m.tipo)}</td><td>${esc(ptName(m.origen) || '—')}</td><td>${esc(ptName(m.destino) || '—')}</td><td class="mono">${esc(m.guia || '—')}</td><td class="muted small">${esc(m.nota)}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">Sin movimientos.</td></tr>'}</tbody></table></div>${pager(l.length, f.page, 'lg')}`;
+    return;
+  }
+  const est = f.tab === 'transito' ? 'En tránsito' : 'En laboratorio', max = f.tab === 'transito' ? S.cfg.maxTransito : S.cfg.maxLab;
+  const l = S.equipos.filter(e => e.estado === est && e.envio).sort((a, b) => a.envio.fecha.localeCompare(b.envio.fecha));
+  $('#lgres').innerHTML = `<div class="tw"><table><thead><tr><th>Equipo</th><th>Sitio de origen</th><th>Laboratorio</th><th>Guía</th><th>Enviado</th><th>Tiempo fuera</th><th></th></tr></thead><tbody>${l.map(e => { const d = daysSince(e.envio.fecha), pto = e.puntoId || e.puntoOrigen, cub = pto && ptById(pto) && cobertura(ptById(pto)).estado === 'descubierto'; return `<tr><td class="mono"><b>${esc(e.codigo)}</b><div class="muted small" style="font-family:var(--font)">${esc(e.tipo)}</div></td><td>${pto ? esc(ptName(pto)) : 'Bodega'}${cub ? '<div>' + pill('crit', 'Punto descubierto') + '</div>' : ''}</td><td>${esc(e.envio.laboratorio)}</td><td class="mono">${esc(e.envio.guia)}<div class="muted small" style="font-family:var(--font)">${esc(e.envio.transportadora)}</div></td><td>${fmt(e.envio.fecha)}</td><td>${pill(d > max ? 'warn' : 'ok', d + ' días' + (d > max ? ' · demorado' : ''))}</td><td style="white-space:nowrap">${est === 'En tránsito' ? `<button class="btn sm" data-act="recepcion" data-id="${esc(e.id)}" type="button">Recibido en laboratorio</button> ` : ''}<button class="btn sm primary" data-act="retorno" data-id="${esc(e.id)}" type="button">Registrar retorno</button></td></tr>`; }).join('') || `<tr><td colspan="7" class="empty">No hay equipos ${f.tab === 'transito' ? 'en tránsito' : 'en laboratorio'}.</td></tr>`}</tbody></table></div>`;
+}
+function movExport() { exportModal('movimientos.csv', toCSV(['id', 'fecha', 'equipo', 'movimiento', 'origen', 'destino', 'guia', 'nota'], S.movs.map(m => [m.id, m.fecha, m.equipoId, m.tipo, m.origen, m.destino, m.guia, m.nota])), 'text/csv'); }
+
+function recepcion(id) { const e = eqById(id); e.estado = 'En laboratorio'; if (e.envio) e.envio.recepcion = todayIso(); log(id, 'Recepción en laboratorio', ptName(e.puntoId || e.puntoOrigen), e.envio ? e.envio.laboratorio : '', e.envio ? e.envio.guia : '', ''); save(); toast(e.codigo + ' recibido en laboratorio'); render(); if (!$('#overlay').hidden) eqOpen(id); }
+function aBodega(id) { const e = eqById(id); log(id, 'Devolución a bodega', ptName(e.puntoId), 'Bodega', '', ''); e.puntoId = null; e.estado = 'Disponible'; save(); toast(e.codigo + ' devuelto a bodega'); closeModal(); render(); }
+function baja(id) { const e = eqById(id); confirmModal(`¿Dar de baja el equipo <b>${esc(e.codigo)}</b>? Dejará de contar para la cobertura y de generar alertas.`, () => { log(id, 'Baja del equipo', ptName(e.puntoId), '', '', ''); e.estado = 'Baja'; e.puntoId = null; save(); toast('Equipo dado de baja'); render(); }, 'Dar de baja'); }
+
+function envioForm(pre) {
+  ENV.sel = new Set(pre || []); ENV.q = '';
+  const labs = [...new Set(S.equipos.map(x => x.laboratorio).filter(Boolean))], trs = ['Servientrega', 'Interrapidísimo', 'Envía', 'Coordinadora'];
+  openModal('Nuevo envío a calibración', `<div class="form">
+  <label>Laboratorio<input type="text" id="e_lab" list="dl_l2" value="${esc(labs[0] || '')}"><datalist id="dl_l2">${labs.map(l => `<option value="${esc(l)}">`).join('')}</datalist></label>
+  <label>Transportadora<input type="text" id="e_tr" list="dl_t2" value="${trs[0]}"><datalist id="dl_t2">${trs.map(l => `<option value="${l}">`).join('')}</datalist></label>
+  <label>N.º de guía<input type="text" id="e_guia"></label><label>Fecha de envío<input type="date" id="e_fecha" value="${todayIso()}"></label></div>
+  <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="e_swap" checked> Instalar un reemplazo de bodega en el punto antes de retirar el equipo (evita dejarlo descubierto)</label>
+  <input type="search" id="e_q" placeholder="Buscar equipo por código, sitio o ciudad" aria-label="Buscar equipo para enviar">
+  <div class="picklist" id="envList"></div><div id="envSum"></div>`,
+    `<button class="btn" data-act="close" type="button">Cancelar</button><button class="btn primary" id="e_ok" type="button">Registrar envío</button>`, true);
+  $('#e_q').oninput = () => { ENV.q = $('#e_q').value; envList(); };
+  $('#e_swap').onchange = envSum;
+  $('#e_ok').onclick = envioOk; envList();
+}
+function envList() {
+  const q = ENV.q.trim().toLowerCase();
+  const l = S.equipos.filter(e => ['En uso', 'Disponible'].includes(e.estado) && (ENV.sel.has(e.id) || !q || (e.codigo + ' ' + ptName(e.puntoId) + ' ' + ((ptById(e.puntoId) || {}).ciudad || '')).toLowerCase().includes(q))).sort((a, b) => (ENV.sel.has(b.id) - ENV.sel.has(a.id)) || (a.venc || '9').localeCompare(b.venc || '9')).slice(0, 60);
+  $('#envList').innerHTML = l.map(e => `<label class="pick"><input type="checkbox" data-env="${esc(e.id)}" ${ENV.sel.has(e.id) ? 'checked' : ''}><span><b class="mono">${esc(e.codigo)}</b> · ${esc(e.tipo)}<div class="muted small">${e.puntoId ? esc(ptName(e.puntoId)) : 'Bodega'}</div></span>${vigPill(e)}</label>`).join('') || '<div class="empty">Sin resultados.</div>';
+  envSum();
+}
+function envSum() {
+  const ids = [...ENV.sel], used = [];
+  let conPunto = 0, conRepl = 0;
+  ids.forEach(id => { const e = eqById(id); if (e.estado === 'En uso' && e.puntoId) { conPunto++; const r = reemplazoPara(e, used); if (r) { used.push(r.id); conRepl++; } } });
+  const sin = conPunto - conRepl, swap = $('#e_swap') && $('#e_swap').checked;
+  $('#envSum').innerHTML = `<div class="hint ${!ids.length ? '' : sin && swap ? 'warn' : sin ? 'crit' : 'ok'}"><b>${ids.length}</b> equipos seleccionados. ${conPunto ? `${conPunto} están instalados en un punto: ${conRepl} tienen reemplazo en bodega${sin ? ` y <b>${sin} dejarán su punto descubierto</b> mientras se calibran` : ''}.` : ''}${!swap && conPunto ? ' El reemplazo automático está desactivado: los puntos quedarán sin cobertura.' : ''}</div>`;
+}
+function envioOk() {
+  if (!ENV.sel.size) return toast('Seleccione al menos un equipo');
+  const lab = $('#e_lab').value.trim(), tr = $('#e_tr').value.trim(), guia = $('#e_guia').value.trim(), fecha = $('#e_fecha').value || todayIso(), swap = $('#e_swap').checked;
+  if (!lab) return toast('Indique el laboratorio'); let rep = 0;
+  [...ENV.sel].forEach(id => {
+    const e = eqById(id), pid = e.puntoId;
+    if (swap && e.estado === 'En uso' && pid) { const r = reemplazoPara(e); if (r) { r.puntoId = pid; r.estado = 'En uso'; log(r.id, 'Instalación (reemplazo)', 'Bodega', pid, '', 'Reemplaza a ' + e.codigo, fecha); e.puntoOrigen = pid; e.puntoId = null; rep++; } }
+    const origen = e.puntoId || e.puntoOrigen || 'Bodega';
+    e.estado = 'En tránsito'; e.laboratorio = lab; e.envio = { fecha, guia, transportadora: tr, laboratorio: lab, recepcion: null };
+    log(id, 'Envío a calibración', origen, lab, guia, '', fecha);
+  });
+  save(); closeModal(); toast(ENV.sel.size + (ENV.sel.size === 1 ? ' equipo enviado' : ' equipos enviados') + (rep ? ' · ' + rep + (rep === 1 ? ' reemplazo instalado' : ' reemplazos instalados') : '')); F.lg.tab = 'transito'; F.lg.page = 1; go('logistica');
+}
+
+function retornoForm(id) {
+  const e = eqById(id), pto = e.puntoId || e.puntoOrigen, hoy = todayIso();
+  openModal('Retorno de calibración · ' + esc(e.codigo), `<div class="form">
+  <label>Fecha de calibración<input type="date" id="r_cal" value="${hoy}"></label><label>Nuevo vencimiento<input type="date" id="r_venc" value="${addMonths(hoy, S.cfg.meses)}"></label>
+  <label>N.º de certificado<input type="text" id="r_cert"></label><label>Resultado<select id="r_res"><option>Conforme</option><option>No conforme</option></select></label>
+  <label>Laboratorio<input type="text" id="r_lab" value="${esc(e.laboratorio || '')}"></label>
+  <label>Destino al recibirlo<select id="r_dest"><option value="bodega">Bodega (queda disponible)</option>${pto ? `<option value="origen" ${e.puntoId ? 'selected' : ''}>Reinstalar en ${esc(ptName(pto))}</option>` : ''}</select></label></div>
+  <div class="hint">Si el resultado es no conforme, se genera una alerta crítica para evaluar el impacto sobre el producto almacenado desde la calibración anterior.</div>`,
+    `<button class="btn" data-act="close" type="button">Cancelar</button><button class="btn primary" id="r_ok" type="button">Registrar retorno</button>`);
+  $('#r_cal').onchange = () => { if ($('#r_cal').value) $('#r_venc').value = addMonths($('#r_cal').value, S.cfg.meses); };
+  $('#r_ok').onclick = () => {
+    const cal = $('#r_cal').value; if (!cal) return toast('Indique la fecha de calibración');
+    const guia = e.envio ? e.envio.guia : '', dest = $('#r_dest').value;
+    e.fechaCal = cal; e.venc = $('#r_venc').value || addMonths(cal, S.cfg.meses); e.certificado = $('#r_cert').value.trim(); e.resultado = $('#r_res').value; e.laboratorio = $('#r_lab').value.trim() || e.laboratorio; e.envio = null;
+    if (dest === 'origen' && pto) { e.puntoId = pto; e.estado = 'En uso'; } else { e.puntoId = null; e.estado = 'Disponible'; } delete e.puntoOrigen;
+    log(id, 'Retorno de calibración', e.laboratorio, e.puntoId || 'Bodega', guia, 'Certificado ' + (e.certificado || 'pendiente') + ' · ' + e.resultado, cal);
+    save(); closeModal(); toast(e.codigo + ' recalibrado' + (e.resultado === 'No conforme' ? ' · resultado no conforme' : '')); render();
+  };
+}
+/* ============ PLANIFICADOR ============ */
+function planData() {
+  const H = F.pl.dias, c = S.cfg;
+  const due = S.equipos.filter(e => ['En uso', 'Disponible'].includes(e.estado) && e.venc && daysTo(e.venc) <= H).sort((a, b) => a.venc.localeCompare(b.venc));
+  const dueIds = new Set(due.map(e => e.id));
+  const pool = S.equipos.filter(e => e.estado === 'Disponible' && !e.puntoId && !dueIds.has(e.id) && daysTo(e.venc) > H);
+  const usados = new Set(), res = {}, need = {}, have = {};
+  TIPOS.forEach(t => { need[t] = 0; have[t] = pool.filter(x => x.tipo === t).length; });
+  due.forEach(e => {
+    const sendBy = addDays(e.venc, -c.diasLab); let r = null;
+    if (e.estado === 'En uso' && e.puntoId) { need[e.tipo]++; r = pool.find(x => x.tipo === e.tipo && !usados.has(x.id)) || null; if (r) usados.add(r.id); }
+    res[e.id] = { sendBy, r, urgente: daysTo(sendBy) <= 0 };
+  });
+  return { due, res, need, have };
+}
+function vPlanificador() {
+  const f = F.pl, P = planData(), c = S.cfg;
+  const brechas = TIPOS.filter(t => P.need[t] > P.have[t]);
+  $('#view').innerHTML = `<div class="grid g-kpi">${TIPOS.map(t => `<div class="kpi" style="cursor:default"><span class="l">${t}: reemplazos necesarios</span><span class="v ${P.need[t] > P.have[t] ? 'crit' : 'ok'}" style="color:${P.need[t] > P.have[t] ? 'var(--crit)' : 'var(--ok)'}">${P.need[t]} <span class="muted" style="font-size:1rem;font-weight:500">/ ${P.have[t]} en bodega</span></span><span class="s">${P.need[t] > P.have[t] ? 'Faltan ' + (P.need[t] - P.have[t]) + ' para no dejar puntos descubiertos' : 'Bodega suficiente'}</span></div>`).join('')}
+  <div class="kpi" style="cursor:default"><span class="l">Equipos por enviar</span><span class="v">${P.due.length}</span><span class="s">vencen en ${f.dias} días o ya vencieron</span></div></div>
+  ${brechas.length ? `<div class="hint warn"><b>Brecha de reemplazos.</b> Escalone los envíos por tandas o compre equipos de rotación. El envío ida y vuelta toma unos ${c.diasLab} días.</div>` : ''}
+  <section class="card"><div class="toolbar"><label class="small muted" for="pl_d">Horizonte</label><select id="pl_d" data-f="pl.dias">${opt([[30, '30 días'], [60, '60 días'], [90, '90 días'], [120, '120 días'], [180, '180 días']], f.dias)}</select>
+  <button class="btn" data-act="plSel" data-k="repl" type="button">Marcar los que tienen reemplazo</button><button class="btn" data-act="plSel" data-k="all" type="button">Marcar todos</button><button class="btn" data-act="plSel" data-k="none" type="button">Limpiar</button>
+  <button class="btn primary" id="plGo" data-act="plGo" style="margin-left:auto" type="button">Preparar envío</button></div>
+  <div class="tw"><table><thead><tr><th></th><th>Equipo</th><th>Sitio</th><th>Vigencia</th><th>Enviar antes de</th><th>Reemplazo</th></tr></thead><tbody>${P.due.map(e => { const r = P.res[e.id]; return `<tr><td><input type="checkbox" data-pl="${esc(e.id)}" ${f.sel[e.id] ? 'checked' : ''} aria-label="Seleccionar ${esc(e.codigo)}"></td><td class="mono"><b>${esc(e.codigo)}</b><div class="muted small" style="font-family:var(--font)">${esc(e.tipo)}</div></td><td>${e.puntoId ? esc(ptName(e.puntoId)) : '<span class="muted">Bodega</span>'}</td><td>${vigPill(e)}</td><td>${r.urgente ? pill('crit', 'Enviar ya') : fmt(r.sendBy)}</td><td>${e.estado !== 'En uso' ? '<span class="muted">No requiere</span>' : r.r ? `<span class="mono">${esc(r.r.codigo)}</span>` : pill('crit', 'Sin reemplazo')}</td></tr>`; }).join('') || '<tr><td colspan="6" class="empty">Ningún equipo vence dentro del horizonte.</td></tr>'}</tbody></table></div></section>`;
+  plCount();
+}
+function plCount() { const n = Object.values(F.pl.sel).filter(Boolean).length, b = $('#plGo'); if (b) { b.textContent = 'Preparar envío' + (n ? ' (' + n + ')' : ''); b.disabled = !n; } }
+
+/* ============ AJUSTES e IMPORTACIÓN ============ */
+function vAjustes() {
+  const c = S.cfg, fld = (k, l, h) => `<label>${l}<input type="number" min="0" id="c_${k}" value="${c[k]}"><span class="small muted">${h}</span></label>`;
+  $('#view').innerHTML = `<div class="grid g-2">
+  <section class="card"><div class="card-h"><h2>Parámetros de alerta</h2></div><div class="card-b stack"><div class="form">
+  ${fld('a1', 'Planificar desde (días)', 'Alerta informativa')}${fld('a2', 'Vence pronto (días)', 'Advertencia y riesgo de cobertura')}${fld('a3', 'Crítico (días)', 'Alerta crítica')}
+  ${fld('diasLab', 'Ciclo de calibración (días)', 'Ida, laboratorio y vuelta')}${fld('maxTransito', 'Máx. días en tránsito', 'Alerta de envío demorado')}${fld('maxLab', 'Máx. días en laboratorio', 'Alerta de calibración demorada')}${fld('meses', 'Vigencia del certificado (meses)', 'Por defecto al registrar')}</div>
+  <div><button class="btn primary" data-act="cfgSave" type="button">Guardar parámetros</button></div></div></section>
+  <section class="card"><div class="card-h"><h2>Exportar</h2></div><div class="card-b stack"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="eqExport" type="button">Equipos CSV</button><button class="btn" data-act="ptExport" type="button">Puntos CSV</button><button class="btn" data-act="movExport" type="button">Movimientos CSV</button><button class="btn" data-act="bkExport" type="button">Copia de seguridad JSON</button></div>
+  <div class="hint">Los datos se guardan en este navegador. Haga copias de seguridad con regularidad y comparta el archivo con su equipo.</div></div></section></div>
+  <section class="card"><div class="card-h"><h2>Importar datos</h2></div><div class="card-b stack">
+  <div class="form"><label>Qué importa<select id="i_kind"><option value="equipos">Equipos</option><option value="puntos">Puntos</option><option value="backup">Copia de seguridad JSON</option></select></label><label>Archivo<input type="file" id="i_file" accept=".csv,.txt,.json"></label></div>
+  <textarea id="i_txt" rows="7" placeholder="Pegue aquí el CSV o cargue un archivo. Primera fila: encabezados."></textarea>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="tplShow" type="button">Ver plantilla</button><button class="btn primary" data-act="doImport" type="button">Importar</button></div>
+  <div class="hint">${S.demo ? 'Al importar por primera vez se eliminan los datos de ejemplo.' : 'Las filas con un código ya existente se actualizan; las demás se agregan.'}</div></div></section>
+  <section class="card"><div class="card-h"><h2>Zona de datos</h2></div><div class="card-b" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="demo" type="button">Cargar datos de ejemplo</button><button class="btn danger" data-act="wipe" type="button">Borrar todos los datos</button></div></section>`;
+  $('#i_file').onchange = () => { const f = $('#i_file').files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { $('#i_txt').value = r.result; if (/\.json$/i.test(f.name)) $('#i_kind').value = 'backup'; }; r.readAsText(f); };
+}
+function parseCSV(t) {
+  t = t.replace(/^﻿/, '').trim(); if (!t) return []; const first = t.split(/\r?\n/)[0], sep = (first.match(/;/g) || []).length > (first.match(/,/g) || []).length ? ';' : ',';
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < t.length; i++) { const ch = t[i]; if (q) { if (ch === '"') { if (t[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += ch; } else if (ch === '"') q = true; else if (ch === sep) { row.push(cell); cell = ''; } else if (ch === '\n' || ch === '\r') { if (ch === '\r' && t[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; } else cell += ch; }
+  row.push(cell); rows.push(row);
+  const norm = s => s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  const head = rows.shift().map(norm); return rows.filter(r => r.some(x => x.trim())).map(r => { const o = {}; head.forEach((h, i) => o[h] = (r[i] || '').trim()); return o; });
+}
+function normDate(s) { s = (s || '').trim(); if (!s) return ''; if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/); return m ? m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0') : ''; }
+function doImport() {
+  const kind = $('#i_kind').value, txt = $('#i_txt').value.trim(); if (!txt) return toast('Pegue datos o cargue un archivo');
+  try {
+    if (kind === 'backup') { const d = JSON.parse(txt); if (!d.equipos || !d.puntos) throw new Error('Formato no válido'); S = { ...d, cfg: { ...DEF_CFG, ...d.cfg }, demo: false, movs: d.movs || [], seq: d.seq || (d.movs || []).length + 1 }; save(); toast('Copia restaurada'); return render(); }
+    const rows = parseCSV(txt); if (!rows.length) return toast('No se encontraron filas');
+    if (S.demo) { S.equipos = []; S.puntos = []; S.movs = []; S.demo = false; }
+    let nuevos = 0, act = 0;
+    if (kind === 'puntos') rows.forEach(r => { const id = r.id || r.codigo; if (!id) return; const d = { id, nombre: r.nombre || r.punto || id, ciudad: r.ciudad || '', region: REGIONES.find(x => x.toLowerCase().startsWith((r.region || '').toLowerCase().slice(0, 4))) || r.region || REGIONES[0], tipo: /disp/i.test(r.tipo) ? 'Disperso' : 'Capital', reqTH: r.req_th === '' || r.req_th === undefined ? 1 : +r.req_th || 0, reqT: r.req_t === '' || r.req_t === undefined ? 1 : +r.req_t || 0 }; const ex = ptById(id); if (ex) { Object.assign(ex, d); act++; } else { S.puntos.push(d); nuevos++; } });
+    else rows.forEach(r => {
+      const cod = r.codigo || r.id; if (!cod) return; const tipo = /higr|th|humed/i.test(r.tipo || cod) ? TIPOS[0] : TIPOS[1], pid = r.punto_id || r.punto || '', cal = normDate(r.fecha_calibracion || r.calibracion);
+      let est = ESTADOS.find(x => x.toLowerCase() === (r.estado || '').toLowerCase()) || (pid ? 'En uso' : 'Disponible');
+      const d = { codigo: cod, tipo, marca: r.marca || '', modelo: r.modelo || '', serie: r.serie || '', puntoId: pid && ptById(pid) ? pid : (pid ? null : null), estado: est, fechaCal: cal, venc: normDate(r.vencimiento || r.fecha_vencimiento) || (cal ? addMonths(cal, S.cfg.meses) : ''), laboratorio: r.laboratorio || '', certificado: r.certificado || '', resultado: /no/i.test(r.resultado || '') ? 'No conforme' : 'Conforme' };
+      const ex = eqById(cod); if (ex) { Object.assign(ex, d); act++; } else { S.equipos.push({ id: cod, ...d, envio: null }); log(cod, 'Alta de equipo', '', d.puntoId || 'Bodega', '', 'Importación'); nuevos++; }
+    });
+    save(); toast(`Importación lista: ${nuevos} nuevos, ${act} actualizados`); render();
+  } catch (e) { toast('No se pudo importar: ' + e.message); }
+}
+const TPL = { equipos: 'codigo,tipo,marca,modelo,serie,punto_id,estado,fecha_calibracion,vencimiento,laboratorio,certificado\nTH-0001,Termohigrómetro,Testo,608-H1,S123456,P001,En uso,2026-03-15,2027-03-15,Metrolab S.A.S.,CC-2026-1234', puntos: 'id,nombre,ciudad,region,tipo,req_th,req_t\nP001,Farmacia Bogotá 1,Bogotá,Andina,Capital,1,1' };
+/* ============ EVENTOS e INICIO ============ */
+const VIEWFN = { panel: vPanel, alertas: vAlertas, equipos: vEquipos, puntos: vPuntos, logistica: vLogistica, planificador: vPlanificador, ajustes: vAjustes };
+const ACT = {
+  close: closeModal,
+  goto: d => { closeModal(); go(d.v); },
+  kpi: d => {
+    if (d.k === 'cob' || d.k === 'desc') { F.pt = { q: '', tipo: '', region: '', cob: 'descubierto', page: 1 }; go('puntos'); }
+    else if (d.k === 'venc') { F.eq = { q: '', tipo: '', estado: '', vig: 'vencido', page: 1 }; go('equipos'); }
+    else if (d.k === 'prox') { F.eq = { q: '', tipo: '', estado: '', vig: 'porvencer', page: 1 }; go('equipos'); }
+    else { F.lg.tab = 'transito'; go('logistica'); }
+  },
+  eqOpen: d => eqOpen(d.id), eqNew: () => eqForm(), eqEdit: d => eqForm(d.id), eqExport,
+  ptOpen: d => ptOpen(d.id), ptNew: () => ptForm(), ptEdit: d => ptForm(d.id), ptExport,
+  alExport: () => exportModal('alertas.csv', toCSV(['severidad', 'tipo', 'alerta', 'detalle'], genAlertas().map(a => [a.sev, a.tipo, a.t, a.d])), 'text/csv'),
+  asignar: d => asignarForm(d.id), aBodega: d => aBodega(d.id), baja: d => baja(d.id),
+  install: d => { instalar(d.eq, d.pt); closeModal(); render(); },
+  envio: d => { closeModal(); envioForm(d && d.id ? [d.id] : []); },
+  recepcion: d => recepcion(d.id), retorno: d => { closeModal(); retornoForm(d.id); }, movExport,
+  lgTab: d => { F.lg.tab = d.k; F.lg.page = 1; vLogistica(); },
+  pg: d => { F[d.k].page += +d.d; ({ eq: eqRes, pt: ptRes, lg: lgRes })[d.k](); },
+  plSel: d => { const P = planData(); F.pl.sel = {}; if (d.k !== 'none') P.due.forEach(e => { if (d.k === 'all' || (e.estado === 'En uso' && P.res[e.id].r) || e.estado === 'Disponible') F.pl.sel[e.id] = true; }); vPlanificador(); },
+  plGo: () => { const ids = Object.keys(F.pl.sel).filter(k => F.pl.sel[k]); if (ids.length) envioForm(ids); },
+  cfgSave: () => { const n = {}; for (const k of Object.keys(DEF_CFG)) { n[k] = +$('#c_' + k).value; if (!(n[k] >= 0)) return toast('Revise los valores numéricos'); } if (!(n.a3 <= n.a2 && n.a2 <= n.a1)) return toast('Deben cumplirse: crítico ≤ vence pronto ≤ planificar'); S.cfg = n; save(); toast('Parámetros guardados'); renderNav(); },
+  bkExport: () => exportModal('copia-control-metrologico.json', JSON.stringify(S, null, 1), 'application/json'),
+  tplShow: () => { $('#i_txt').value = TPL[$('#i_kind').value] || ''; },
+  doImport,
+  demo: () => confirmModal('Se reemplazarán todos los datos actuales por los datos de ejemplo.', () => { S = seedData(); save(); toast('Datos de ejemplo cargados'); render(); }, 'Cargar ejemplo'),
+  wipe: () => confirmModal('Se borrarán todos los equipos, puntos y movimientos de este navegador. Esta acción no se puede deshacer. Haga antes una copia de seguridad.', () => { S = { puntos: [], equipos: [], movs: [], cfg: { ...S.cfg }, seq: 1, demo: false }; save(); toast('Datos borrados'); render(); }, 'Borrar todo')
+};
+document.addEventListener('click', ev => {
+  if (ev.target.id === 'overlay') return closeModal();
+  const t = ev.target.closest('[data-act]'); if (!t || t.disabled) return;
+  if (ev.target.closest('input,select,textarea') && t.tagName === 'TR') return;
+  const fn = ACT[t.dataset.act]; if (fn) fn(t.dataset, t);
+});
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !$('#overlay').hidden) closeModal(); });
+function onFilter(ev) {
+  const t = ev.target;
+  if (t.dataset.env !== undefined) { t.checked ? ENV.sel.add(t.dataset.env) : ENV.sel.delete(t.dataset.env); return envSum(); }
+  if (t.dataset.pl !== undefined) { F.pl.sel[t.dataset.pl] = t.checked; return plCount(); }
+  const k = t.dataset.f; if (!k) return;
+  const [g, key] = k.split('.'); F[g][key] = key === 'dias' ? +t.value : t.value; if (F[g].page !== undefined) F[g].page = 1;
+  ({ eq: eqRes, pt: ptRes, lg: lgRes, al: vAlertas, pl: vPlanificador })[g]();
+}
+document.addEventListener('input', ev => { if (ev.target.matches('input[type=search],input[type=text][data-f]')) onFilter(ev); });
+document.addEventListener('change', ev => { if (ev.target.matches('select[data-f],input[type=checkbox]')) onFilter(ev); });
+
+$('#themeBtn').onclick = () => {
+  const r = document.documentElement, dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme:dark)').matches;
+  r.dataset.theme = dark ? 'light' : 'dark'; try { localStorage.setItem('ctrlmet.theme', r.dataset.theme); } catch (e) { }
+};
+try { const th = localStorage.getItem('ctrlmet.theme'); if (th) document.documentElement.dataset.theme = th; } catch (e) { }
+window.addEventListener('hashchange', route);
+load(); route();
+</script></body></html>
